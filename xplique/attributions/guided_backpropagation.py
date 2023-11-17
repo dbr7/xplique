@@ -42,11 +42,13 @@ class GuidedBackprop(WhiteBoxExplainer):  # pylint: disable=duplicate-code
     """
     def __init__(self,
                 model: tf.keras.Model,
+                intermediate_layer_model: tf.keras.Model,
+                 intermediate_layer_model2: tf.keras.Model,
                 output_layer: Optional[Union[str, int]] = None,
                 batch_size: Optional[int] = 32,
                 operator: Optional[Union[Tasks, str, OperatorSignature]] = None,
                 reducer: Optional[str] = "mean",):
-        super().__init__(model, output_layer, batch_size, operator, reducer)
+        super().__init__(model, intermediate_layer_model, intermediate_layer_model2, output_layer, batch_size, operator, reducer)
         self.model = override_relu_gradient(self.model, guided_relu_policy)
 
     @sanitize_input_output
@@ -76,5 +78,5 @@ class GuidedBackprop(WhiteBoxExplainer):  # pylint: disable=duplicate-code
         explanations
             Deconv maps.
         """
-        gradients = self.batch_gradient(self.model, inputs, targets, self.batch_size)
+        gradients = self.batch_gradient(self.model, self.intermediate_layer_model, self.intermediate_layer_model2, inputs, targets, self.batch_size)
         return gradients

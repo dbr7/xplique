@@ -6,6 +6,7 @@ import inspect
 from enum import Enum
 
 import tensorflow as tf
+# tf.config.run_functions_eagerly(True)
 
 from ..types import Callable, Optional, Union, OperatorSignature
 from .exceptions import raise_invalid_operator, no_gradients_available
@@ -161,14 +162,26 @@ def get_gradient_of_operator(operator):
     gradient
         Gradient of the operator.
     """
+    # @tf.function
+    # def gradient(model, inputs, targets):
+    #     with tf.GradientTape() as tape:
+    #         tape.watch(inputs)
+    #         scores = operator(model, inputs, targets)
+
+    #     return tape.gradient(scores, inputs)
+
+    # return gradient
+
     @tf.function
-    def gradient(model, inputs, targets):
+    def gradient(model, intermediate_layer_model, intermediate_layer_model2, inputs, targets):
         with tf.GradientTape() as tape:
-            tape.watch(inputs)
-            scores = operator(model, inputs, targets)
-
-        return tape.gradient(scores, inputs)
-
+            # tape.watch(inputs)
+            intermediate_output = intermediate_layer_model(inputs)
+            tape.watch(intermediate_output)
+            scores = operator(intermediate_layer_model2, intermediate_output, targets)
+            
+        # Compute the gradients with respect to the chosen layer's output
+        return tape.gradient(scores, intermediate_output)
     return gradient
 
 
@@ -187,15 +200,15 @@ def operator_batching(operator: OperatorSignature) -> tf.Tensor:
         Function that apply operator by batch.
     """
 
-    def batched_operator(model, inputs, targets, batch_size=None):
+    def batched_operator(model, intermediate_layer_model, intermediate_layer_model2, inputs, targets, batch_size=None):
         if batch_size is not None:
             dataset = tf.data.Dataset.from_tensor_slices((inputs, targets))
             results = tf.concat([
-                operator(model, x, y)
+                operator(model, intermediate_layer_model, intermediate_layer_model2, x, y)
                 for x, y in dataset.batch(batch_size)
             ], axis=0)
         else:
-            results = operator(model, inputs, targets)
+            results = operator(model, intermediate_layer_model, intermediate_layer_model2, inputs, targets)
 
         return results
 

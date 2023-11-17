@@ -54,18 +54,32 @@ class BlackBoxExplainer(ABC):
     # share the reconfigured models between the methods if possible
     _cache_models: Dict[Tuple[int, int], tf.keras.Model] = {}
 
-    def __init__(self, model: Callable, batch_size: Optional[int] = 64,
+    def __init__(self, model: Callable, intermediate_layer_model: Callable, intermediate_layer_model2: Callable, batch_size: Optional[int] = 64,
                 operator: Optional[Union[Tasks, str, OperatorSignature]] = None):
 
         if isinstance(model, TorchWrapper):
             self.model = model
+            self.intermediate_layer_model = intermediate_layer_model
+            self.intermediate_layer_model2 = intermediate_layer_model2
         elif isinstance(model, tf.keras.Model):
             model_key = (id(model.input), id(model.output))
             if model_key not in BlackBoxExplainer._cache_models:
                 BlackBoxExplainer._cache_models[model_key] = model
             self.model = BlackBoxExplainer._cache_models[model_key]
+
+            intermediate_layer_model_key = (id(intermediate_layer_model.input), id(intermediate_layer_model.output))
+            if intermediate_layer_model_key not in BlackBoxExplainer._cache_models:
+                BlackBoxExplainer._cache_models[intermediate_layer_model_key] = intermediate_layer_model
+            self.intermediate_layer_model = BlackBoxExplainer._cache_models[intermediate_layer_model_key]
+
+            intermediate_layer_model2_key = (id(intermediate_layer_model2.input), id(intermediate_layer_model2.output))
+            if intermediate_layer_model2_key not in BlackBoxExplainer._cache_models:
+                BlackBoxExplainer._cache_models[intermediate_layer_model2_key] = intermediate_layer_model2
+            self.intermediate_layer_model2 = BlackBoxExplainer._cache_models[intermediate_layer_model2_key]
         else:
             self.model = model
+            self.intermediate_layer_model = intermediate_layer_model
+            self.intermediate_layer_model2 = intermediate_layer_model2
 
         self.batch_size = batch_size
 
@@ -108,9 +122,10 @@ class BlackBoxExplainer(ABC):
 
     def __call__(self,
                  inputs: tf.Tensor,
-                 labels: tf.Tensor) -> tf.Tensor:
+                 labels: tf.Tensor,
+                 intermediate_layer) -> tf.Tensor:
         """Explain alias"""
-        return self.explain(inputs, labels)
+        return self.explain(inputs, labels, intermediate_layer)
 
 
 class WhiteBoxExplainer(BlackBoxExplainer, ABC):
@@ -139,12 +154,14 @@ class WhiteBoxExplainer(BlackBoxExplainer, ABC):
 
     def __init__(self,
                 model: tf.keras.Model,
+                intermediate_layer_model: tf.keras.Model,
+                intermediate_layer_model2: tf.keras.Model,
                 output_layer: Optional[Union[str, int]] = None,
                 batch_size: Optional[int] = 64,
                 operator: Optional[OperatorSignature] = None,
                 reducer: Optional[str] = "mean",):
 
-        super().__init__(model, batch_size, operator)
+        super().__init__(model, intermediate_layer_model, intermediate_layer_model2, batch_size, operator)
 
         if output_layer is not None:
             # reconfigure the model (e.g skip softmax to target logits)

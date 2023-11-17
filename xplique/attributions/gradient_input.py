@@ -62,7 +62,7 @@ class GradientInput(WhiteBoxExplainer):
         explanations
             Gradients x Inputs, with the same shape as the inputs.
         """
-        gradients = self.batch_gradient(self.model, inputs, targets, self.batch_size)
-        gradients_inputs = tf.multiply(gradients, inputs)
+        gradients = self.batch_gradient(self.model, self.intermediate_layer_model, self.intermediate_layer_model2, inputs, targets, self.batch_size)
+        gradients_inputs = tf.multiply(gradients, self.intermediate_layer_model(inputs))
 
         return gradients_inputs

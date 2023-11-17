@@ -49,11 +49,13 @@ class Saliency(WhiteBoxExplainer):
     """
     def __init__(self,
                  model: tf.keras.Model,
+                 intermediate_layer_model: tf.keras.Model,
+                 intermediate_layer_model2: tf.keras.Model,
                  output_layer: Optional[Union[str, int]] = None,
                  batch_size: Optional[int] = 32,
                  operator: Optional[Union[Tasks, str, OperatorSignature]] = None,
                  reducer: Optional[str] = "max",):
-        super().__init__(model, output_layer, batch_size, operator, reducer)
+        super().__init__(model, intermediate_layer_model, intermediate_layer_model2, output_layer, batch_size, operator, reducer)
 
     @sanitize_input_output
     @WhiteBoxExplainer._harmonize_channel_dimension
@@ -81,7 +83,7 @@ class Saliency(WhiteBoxExplainer):
         explanations
             Saliency maps.
         """
-        gradients = self.batch_gradient(self.model, inputs, targets, self.batch_size)
+        gradients = self.batch_gradient(self.model, self.intermediate_layer_model, self.intermediate_layer_model2, inputs, targets, self.batch_size)
         gradients = tf.abs(gradients)
 
         return gradients

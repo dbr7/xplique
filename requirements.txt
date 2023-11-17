@@ -1,8 +1,8 @@
-tensorflow>=2.1.0
-numpy
-scikit-learn
+# tensorflow
+# numpy
+# scikit-learn
 scikit-image
-matplotlib
-scipy
-opencv-python
+# matplotlib
+# scipy
+# opencv-python
 deprecated
